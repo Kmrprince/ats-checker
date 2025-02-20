@@ -1,3 +1,4 @@
+// pages/index.js
 import { useState, useRef } from 'react';
 import FileUpload from '../components/FileUpload';
 import { Document, Page } from '@react-pdf/renderer';
@@ -9,7 +10,6 @@ import { faLock } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
 import mammoth from 'mammoth';
 
-// Home Component (Main Page)
 function Home({ setCurrentPage }) {
   const [score, setScore] = useState(null);
   const [basicFeedback, setBasicFeedback] = useState([]);
@@ -141,7 +141,7 @@ function Home({ setCurrentPage }) {
     const feedback = [];
     requiredSections.forEach(section => {
       if (!foundSections.includes(section)) {
-        feedback.push(`➕ Add the "${section}" section to improve your resume's structure.`);
+        feedback.push(`➕ Add the \"${section}\" section to improve your resume's structure.`); // Escaped quotes
       }
     });
 
@@ -243,11 +243,11 @@ function Home({ setCurrentPage }) {
     }
 
     if (jobDescLower.includes('experience') && !resumeLower.includes('year') && !resumeLower.includes('experience')) {
-      feedback.push("⚠️ The job requires experience. Add terms like 'years' or 'experience' (e.g., '3 years of software development').");
+      feedback.push("⚠️ The job requires experience. Add terms like \"years\" or \"experience\" (e.g., \"3 years of software development\")."); // Escaped quotes
     }
 
     if (jobTitleLower.includes('developer') && !resumeLower.includes('develop') && !resumeLower.includes('coding')) {
-      feedback.push("⚠️ For a 'Software Developer' role, include 'development' or 'coding' to enhance alignment.");
+      feedback.push("⚠️ For a \"Software Developer\" role, include \"development\" or \"coding\" to enhance alignment."); // Escaped quotes
     }
 
     const currentScore = score || 0;
@@ -733,9 +733,9 @@ function WhyATS({ setCurrentPage }) {
           </p>
           <h2 className="text-xl font-semibold mb-2 text-green-600">Key Reasons:</h2>
           <ul className="list-disc pl-5 text-gray-700 mb-4">
-            <li><strong>Keyword Matching:</strong> ATS systems scan for specific resume keywords like "ATS resume" and "job search tips" to match job descriptions.</li>
+            <li><strong>Keyword Matching:</strong> ATS systems scan for specific resume keywords like \"ATS resume\" and \"job search tips\" to match job descriptions.</li>
             <li><strong>Formatting:</strong> Simple, clean layouts with standard fonts ensure ATS can parse your resume correctly.</li>
-            <li><strong>Relevance:</strong> Including industry-specific terms from Google Trends, such as "career advice," aligns your resume with current hiring trends.</li>
+            <li><strong>Relevance:</strong> Including industry-specific terms from Google Trends, such as \"career advice\", aligns your resume with current hiring trends.</li>
             <li><strong>Visibility:</strong> An ATS-optimized resume gets past the initial screening, making your application visible to recruiters.</li>
           </ul>
           <p className="text-gray-700">
@@ -752,7 +752,7 @@ function WhyATS({ setCurrentPage }) {
 }
 
 // Main App Component with Simple Routing
-function App() {
+export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
 
   return (
@@ -762,5 +762,3 @@ function App() {
     </>
   );
 }
-
-export default App;
