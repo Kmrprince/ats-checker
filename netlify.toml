@@ -1,3 +1,8 @@
+# netlify.toml
 [build]
-  command = "npm install && npm run build"  # Install dependencies and build the project
-  publish = ".next"                          # Use the .next directory for publishing; it contains build output
+  command = "npm install && npm run build"
+  publish = ".next"
+  functions = "netlify/functions"  # Already set, but confirm this directory exists
+
+[functions]
+  node_bundler = "esbuild"  # Optimize function bundling
