@@ -1,10 +1,11 @@
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     eslint: {
-      // Skip ESLint during builds
-      ignoreDuringBuilds: true,
+      ignoreDuringBuilds: false,
+      dirs: ['pages', 'components'], // This keeps ESLint checking in the specified directories
     },
+    // next.js exports typically handle static generation automatically
+    output: 'export', // This enables the static export feature
   };
   
   module.exports = nextConfig;

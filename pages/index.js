@@ -130,7 +130,7 @@ function Home({ setCurrentPage }) {
     const feedback = [];
     requiredSections.forEach(section => {
       if (!foundSections.includes(section)) {
-        feedback.push(`➕ Add the "${section}" section to improve your resume's structure.`);
+        feedback.push(`➕ Add the "&quot;${section}&quot;" section to improve your resume's structure.`);
       }
     });
 
@@ -733,10 +733,10 @@ function WhyATS({ setCurrentPage }) {
             </p>
             <h2 className="text-xl font-semibold mb-2 text-green-600">Key Reasons:</h2>
             <ul className="list-disc pl-5 text-gray-700 mb-4">
-              <li><strong>Keyword Matching:</strong> ATS systems scan for specific resume keywords like "ATS resume" and "job search tips" to match job descriptions.</li>
-              <li><strong>Formatting:</strong> Simple, clean layouts with standard fonts ensure ATS can parse your resume correctly.</li>
-              <li><strong>Relevance:</strong> Including industry-specific terms from Google Trends, such as "career advice," aligns your resume with current hiring trends.</li>
-              <li><strong>Visibility:</strong> An ATS-optimized resume gets past the initial screening, making your application visible to recruiters.</li>
+            <li><strong>Keyword Matching:</strong> ATS systems scan for specific resume keywords like &quot;ATS resume&quot; and &quot;job search tips&quot; to match job descriptions.</li>
+<li><strong>Formatting:</strong> Simple, clean layouts with standard fonts ensure ATS can parse your resume correctly.</li>
+<li><strong>Relevance:</strong> Including industry-specific terms from Google Trends, such as &quot;career advice,&quot; aligns your resume with current hiring trends.</li>
+ <li><strong>Visibility:</strong> An ATS-optimized resume gets past the initial screening, making your application visible to recruiters.</li>
             </ul>
             <p className="text-gray-700">
               Use our ATS Checker to analyze your resume and ensure it’s optimized for ATS systems. Boost your job search success with tailored career advice today!
