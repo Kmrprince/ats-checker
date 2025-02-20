@@ -7,7 +7,7 @@ import { auth } from '../lib/firebase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLock } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
-import { Helmet } from 'react-helmet';
+import mammoth from 'mammoth';
 
 // Home Component (Main Page)
 function Home({ setCurrentPage }) {
@@ -67,16 +67,27 @@ function Home({ setCurrentPage }) {
         const { text } = await response.json();
         console.log('Parsed text:', text);
 
-        updateATSScore(text, jobTitle, jobDescription);
-        setResumeFile(file);
-        if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-          setDocxContent(text);
-        } else if (file.type === 'application/pdf') {
-          setPdfText(text);
-          setNumPages(0);
+        if (text) {
+          setResumeFile(file);
+          setPdfText(file.type === 'application/pdf' ? text : '');
+          if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const arrayBuffer = await file.arrayBuffer();
+            const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
+            setDocxContent(html);
+          }
+          updateATSScore(text, jobTitle, jobDescription);
+        } else {
+          console.error('No text returned from API');
+          alert('Failed to parse resume: No text extracted');
         }
       };
+
+      reader.onerror = () => {
+        console.error('FileReader error');
+        alert('Error reading file');
+      };
     } catch (error) {
+      console.error('Upload error:', error);
       alert(`Failed to parse file: ${error.message}`);
     }
   };
@@ -130,7 +141,7 @@ function Home({ setCurrentPage }) {
     const feedback = [];
     requiredSections.forEach(section => {
       if (!foundSections.includes(section)) {
-        feedback.push(`➕ Add the "&quot;${section}&quot;" section to improve your resume's structure.`);
+        feedback.push(`➕ Add the "${section}" section to improve your resume's structure.`);
       }
     });
 
@@ -148,6 +159,7 @@ function Home({ setCurrentPage }) {
     const jobSpecificScore = jobDesc ? (jobSpecificMatchPercentage / 100) * 30 : 30;
     const totalScore = Math.round(sectionScore + baseKeywordScore + jobSpecificScore);
 
+    console.log('Score calculated:', { sectionScore, baseKeywordScore, jobSpecificScore, totalScore });
     setScore(totalScore);
     setBasicFeedback(feedback);
   };
@@ -318,6 +330,7 @@ function Home({ setCurrentPage }) {
   };
 
   const onDocumentLoadSuccess = ({ numPages }) => {
+    console.log('PDF loaded, pages:', numPages);
     setNumPages(numPages);
   };
 
@@ -369,386 +382,372 @@ function Home({ setCurrentPage }) {
   };
 
   return (
-    <>
-      <Helmet>
-        <title>ATS Checker - Optimize Your Resume for Job Success</title>
-        <meta name="description" content="Boost your job search with our ATS Checker. Analyze your resume for ATS compatibility and get expert career advice." />
-        <meta name="keywords" content="ATS resume, job search tips, resume keywords, career advice" />
-        <link rel="canonical" href="https://yourdomain.com/" />
-      </Helmet>
-      <div className="flex flex-col min-h-screen bg-gray-100 bg-gradient-to-br from-gray-100 to-blue-50">
-        {/* Header */}
-        <header className="bg-white shadow-md p-4 flex justify-between items-center md:px-6">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-2xl font-bold text-blue-600"
+    <div className="flex flex-col min-h-screen bg-gray-100 bg-gradient-to-br from-gray-100 to-blue-50">
+      {/* Header */}
+      <header className="bg-white shadow-md p-4 flex justify-between items-center md:px-6">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-2xl font-bold text-blue-600"
+        >
+          ATS Checker
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center space-x-4"
+        >
+          <button
+            onClick={() => setCurrentPage('why-ats')}
+            className="text-blue-600 hover:underline"
           >
-            ATS Checker
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex items-center space-x-4"
-          >
-            <button
-              onClick={() => setCurrentPage('why-ats')}
-              className="text-blue-600 hover:underline"
-            >
-              Why ATS?
-            </button>
-            {isLoggedIn ? (
-              <div className="flex items-center space-x-2">
-                <FontAwesomeIcon icon={faLock} className="text-green-500" />
-                <button
-                  onClick={handleLogOut}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-red-700 transition-all duration-300"
-                >
-                  Log Out
-                </button>
-              </div>
-            ) : (
+            Why ATS?
+          </button>
+          {isLoggedIn ? (
+            <div className="flex items-center space-x-2">
+              <FontAwesomeIcon icon={faLock} className="text-green-500" />
               <button
-                onClick={() => !isLoggedIn && toggleModal()}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
+                onClick={handleLogOut}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-red-700 transition-all duration-300"
               >
-                {isLoggedIn ? 'Deep Scan' : 'Login for Deep Scan'}
+                Log Out
               </button>
-            )}
-          </motion.div>
-        </header>
+            </div>
+          ) : (
+            <button
+              onClick={() => !isLoggedIn && toggleModal()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
+            >
+              {isLoggedIn ? 'Deep Scan' : 'Login for Deep Scan'}
+            </button>
+          )}
+        </motion.div>
+      </header>
 
-        {/* Main Content */}
-        <div className="flex flex-col md:flex-row p-6 md:space-x-6 flex-grow">
-          {/* Left Panel - Score and Feedback */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="w-full md:w-1/3 p-6 bg-white shadow-xl rounded-xl mb-6 md:mb-0"
-          >
-            {resumeFile ? (
-              <>
-                <h2 className="text-3xl font-bold mb-6 text-blue-600">ATS Score: {score !== null ? `${score}/100` : 'Calculating...'}</h2>
-                <div className="space-y-4">
-                  {basicFeedback.map((point, index) => (
+      {/* Main Content */}
+      <div className="flex flex-col md:flex-row p-6 md:space-x-6 flex-grow">
+        {/* Left Panel - Score and Feedback */}
+        <motion.div
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full md:w-1/3 p-6 bg-white shadow-xl rounded-xl mb-6 md:mb-0"
+        >
+          {resumeFile ? (
+            <>
+              <h2 className="text-3xl font-bold mb-6 text-blue-600">
+                ATS Score: {score !== null ? `${score}/100` : 'Calculating...'}
+              </h2>
+              <div className="space-y-4">
+                {basicFeedback.map((point, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ x: -100, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    className="p-4 bg-gray-50 rounded-md border-l-4 border-blue-500 text-gray-700"
+                  >
+                    {point}
+                  </motion.div>
+                ))}
+              </div>
+              <div className="mt-8 flex justify-center">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleDeepAnalysis}
+                  className="bg-green-600 text-white px-8 py-4 rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 text-lg font-semibold"
+                >
+                  Deep Analysis
+                </motion.button>
+              </div>
+              {showDeepAnalysis && isLoggedIn && (
+                <div className="mt-6 space-y-4">
+                  <h3 className="text-xl font-semibold text-green-600">Deep Analysis:</h3>
+                  {deepFeedback.map((point, index) => (
                     <motion.div
                       key={index}
                       initial={{ x: -100, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className="p-4 bg-gray-50 rounded-md border-l-4 border-blue-500 text-gray-700"
+                      className="p-4 bg-gray-50 rounded-md border-l-4 border-green-500 text-gray-700"
                     >
                       {point}
                     </motion.div>
                   ))}
+                  {aiFeedback && (
+                    <motion.div
+                      initial={{ x: -100, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                      className="p-4 bg-gray-50 rounded-md border-l-4 border-blue-500 text-gray-700"
+                    >
+                      {aiFeedback}
+                    </motion.div>
+                  )}
                 </div>
-                <div className="mt-8 flex justify-center">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleDeepAnalysis}
-                    className="bg-green-600 text-white px-8 py-4 rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 text-lg font-semibold"
-                  >
-                    Deep Analysis
-                  </motion.button>
-                </div>
-                {showDeepAnalysis && isLoggedIn && (
-                  <div className="mt-6 space-y-4">
-                    <h3 className="text-xl font-semibold text-green-600">Deep Analysis:</h3>
-                    {deepFeedback.map((point, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ x: -100, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.5, delay: index * 0.1 }}
-                        className="p-4 bg-gray-50 rounded-md border-l-4 border-green-500 text-gray-700"
-                      >
-                        {point}
-                      </motion.div>
-                    ))}
-                    {aiFeedback && (
-                      <motion.div
-                        initial={{ x: -100, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="p-4 bg-gray-50 rounded-md border-l-4 border-blue-500 text-gray-700"
-                      >
-                        {aiFeedback}
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-                <div className="mt-6 p-3 bg-green-50 rounded-md">
-                  <p className="text-sm font-medium text-green-700">✓ Uploaded: {resumeFile.name}</p>
-                </div>
-              </>
-            ) : (
-              <p className="text-gray-500 italic text-center">Upload your resume to get started</p>
+              )}
+              <div className="mt-6 p-3 bg-green-50 rounded-md">
+                <p className="text-sm font-medium text-green-700">✓ Uploaded: {resumeFile.name}</p>
+              </div>
+            </>
+          ) : (
+            <p className="text-gray-500 italic text-center">Upload your resume to get started</p>
+          )}
+        </motion.div>
+
+        {/* Right Panel - Upload and Full Preview */}
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full md:w-2/3 p-6"
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-xl shadow-md p-6 mb-6"
+          >
+            <FileUpload onFileUpload={handleFileUpload} />
+            {isLoggedIn && (
+              <div className="mt-6 space-y-4">
+                <input
+                  type="text"
+                  placeholder="Job Title"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+                <textarea
+                  placeholder="Paste Job Description Here (minimum 200 characters)"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32"
+                />
+              </div>
             )}
           </motion.div>
 
-          {/* Right Panel - Upload and Full Preview */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="w-full md:w-2/3 p-6"
-          >
+          {/* PDF Full Preview */}
+          {resumeFile && resumeFile.type === 'application/pdf' && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
               className="bg-white rounded-xl shadow-md p-6 mb-6"
+              ref={previewRef}
             >
-              <FileUpload onFileUpload={handleFileUpload} />
-              {isLoggedIn && (
-                <div className="mt-6 space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Job Title"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <textarea
-                    placeholder="Paste Job Description Here (minimum 200 characters)"
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32"
-                  />
+              <h3 className="text-lg mb-3 text-gray-700">PDF Preview</h3>
+              <Document file={resumeFile} onLoadSuccess={onDocumentLoadSuccess} onLoadError={console.error}>
+                {numPages && Array.from(new Array(numPages), (el, index) => (
+                  <Page key={`page_${index + 1}`} pageNumber={index + 1} width={600} />
+                ))}
+              </Document>
+              {pdfText && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-md overflow-auto max-h-64">
+                  {formatPdfText(pdfText)}
                 </div>
               )}
             </motion.div>
+          )}
 
-            {/* PDF Full Preview */}
-            {resumeFile && resumeFile.type === 'application/pdf' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="bg-white rounded-xl shadow-md p-6 mb-6"
-                ref={previewRef}
-              >
-                <h3 className="text-lg mb-3 text-gray-700">PDF Preview</h3>
-                <Document file={resumeFile} onLoadSuccess={onDocumentLoadSuccess}>
-                  {numPages > 0 && Array.from(new Array(numPages), (el, index) => (
-                    <Page key={`page_${index + 1}`} pageNumber={index + 1} />
-                  ))}
-                </Document>
-                {pdfText && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-md overflow-auto max-h-64">
-                    {formatPdfText(pdfText)}
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {/* DOCX Full Preview */}
-            {resumeFile && resumeFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="bg-white rounded-xl shadow-md p-6"
-                ref={previewRef}
-              >
-                <h3 className="text-lg mb-3 text-gray-700">DOCX Preview</h3>
-                <div dangerouslySetInnerHTML={{ __html: docxContent }} className="text-gray-600" />
-              </motion.div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Footer */}
-        <footer className="bg-white shadow-inner p-4 text-center text-gray-600 text-sm">
-          © 2025 ATS Checker. All rights reserved.
-        </footer>
-
-        {/* Modal for Sign Up/Login/Reset Password */}
-        {isModalOpen && !isLoggedIn && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          {/* DOCX Full Preview */}
+          {resumeFile && resumeFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && (
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="bg-white rounded-xl shadow-md p-6"
+              ref={previewRef}
             >
-              {!isResetPassword ? (
-                <>
-                  <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Sign Up / Log In</h2>
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                      <input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className='mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                      <input
-                        id="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className='mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'
-                      />
-                    </div>
-                    <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="submit"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-all duration-300 w-full"
-                      >
-                        Sign Up
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleLogIn}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-all duration-300 w-full"
-                        type="button"
-                      >
-                        Log In
-                      </motion.button>
-                    </div>
-                  </form>
-                  <button
-                    onClick={toggleResetPassword}
-                    className="mt-4 text-blue-600 hover:underline text-sm w-full text-center"
-                  >
-                    Forgot Password?
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Reset Password</h2>
-                  <form onSubmit={handleResetPassword} className="space-y-4">
-                    <div>
-                      <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700">Email</label>
-                      <input
-                        id="reset-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        required
-                        className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    {resetMessage && (
-                      <p className={`text-sm ${resetMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
-                        {resetMessage}
-                      </p>
-                    )}
+              <h3 className="text-lg mb-3 text-gray-700">DOCX Preview</h3>
+              <div dangerouslySetInnerHTML={{ __html: docxContent }} className="text-gray-600" />
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-white shadow-inner p-4 text-center text-gray-600 text-sm">
+        © 2025 ATS Checker. All rights reserved.
+      </footer>
+
+      {/* Modal for Sign Up/Login/Reset Password */}
+      {isModalOpen && !isLoggedIn && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md"
+          >
+            {!isResetPassword ? (
+              <>
+                <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Sign Up / Log In</h2>
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+                    <input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       type="submit"
                       className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-all duration-300 w-full"
                     >
-                      Send Reset Email
+                      Sign Up
                     </motion.button>
-                  </form>
-                  <button
-                    onClick={toggleResetPassword}
-                    className="mt-4 text-blue-600 hover:underline text-sm w-full text-center"
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleLogIn}
+                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-all duration-300 w-full"
+                      type="button"
+                    >
+                      Log In
+                    </motion.button>
+                  </div>
+                </form>
+                <button
+                  onClick={toggleResetPassword}
+                  className="mt-4 text-blue-600 hover:underline text-sm w-full text-center"
+                >
+                  Forgot Password?
+                </button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Reset Password</h2>
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div>
+                    <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      id="reset-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  {resetMessage && (
+                    <p className={`text-sm ${resetMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
+                      {resetMessage}
+                    </p>
+                  )}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    type="submit"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-all duration-300 w-full"
                   >
-                    Back to Login
-                  </button>
-                </>
-              )}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleModal}
-                className="mt-4 w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-all duration-300"
-              >
-                Close
-              </motion.button>
-            </motion.div>
-          </div>
-        )}
-      </div>
-    </>
+                    Send Reset Email
+                  </motion.button>
+                </form>
+                <button
+                  onClick={toggleResetPassword}
+                  className="mt-4 text-blue-600 hover:underline text-sm w-full text-center"
+                >
+                  Back to Login
+                </button>
+              </>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleModal}
+              className="mt-4 w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-all duration-300"
+            >
+              Close
+            </motion.button>
+          </motion.div>
+        </div>
+      )}
+    </div>
   );
 }
 
 // WhyATS Component
 function WhyATS({ setCurrentPage }) {
   return (
-    <>
-      <Helmet>
-        <title>Why ATS-Friendly Resumes Matter - ATS Checker</title>
-        <meta name="description" content="Learn why ATS-friendly resumes are crucial for job success. Optimize your resume with our ATS Checker for better career opportunities." />
-        <meta name="keywords" content="ATS resume, job search tips, resume keywords, career advice, ATS optimization" />
-        <link rel="canonical" href="https://yourdomain.com/why-ats" />
-      </Helmet>
-      <div className="flex flex-col min-h-screen bg-gray-100 bg-gradient-to-br from-gray-100 to-blue-50">
-        <header className="bg-white shadow-md p-4 flex justify-between items-center md:px-6">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-2xl font-bold text-blue-600"
+    <div className="flex flex-col min-h-screen bg-gray-100 bg-gradient-to-br from-gray-100 to-blue-50">
+      <header className="bg-white shadow-md p-4 flex justify-between items-center md:px-6">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-2xl font-bold text-blue-600"
+        >
+          ATS Checker
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center space-x-4"
+        >
+          <button
+            onClick={() => setCurrentPage('home')}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
           >
-            ATS Checker
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex items-center space-x-4"
-          >
-            <button
-              onClick={() => setCurrentPage('home')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
-            >
-              Back to Home
-            </button>
-          </motion.div>
-        </header>
+            Back to Home
+          </button>
+        </motion.div>
+      </header>
 
-        <div className="flex-grow p-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-md p-6"
-          >
-            <h1 className="text-3xl font-bold mb-4 text-blue-600">Why ATS-Friendly Resumes Matter</h1>
-            <p className="text-gray-700 mb-4">
-              An ATS (Applicant Tracking System) friendly resume is essential in today’s job market because most companies use ATS software to filter resumes before they reach human recruiters. Crafting your resume with ATS optimization in mind increases your chances of landing an interview.
-            </p>
-            <h2 className="text-xl font-semibold mb-2 text-green-600">Key Reasons:</h2>
-            <ul className="list-disc pl-5 text-gray-700 mb-4">
-            <li><strong>Keyword Matching:</strong> ATS systems scan for specific resume keywords like &quot;ATS resume&quot; and &quot;job search tips&quot; to match job descriptions.</li>
-<li><strong>Formatting:</strong> Simple, clean layouts with standard fonts ensure ATS can parse your resume correctly.</li>
-<li><strong>Relevance:</strong> Including industry-specific terms from Google Trends, such as &quot;career advice,&quot; aligns your resume with current hiring trends.</li>
- <li><strong>Visibility:</strong> An ATS-optimized resume gets past the initial screening, making your application visible to recruiters.</li>
-            </ul>
-            <p className="text-gray-700">
-              Use our ATS Checker to analyze your resume and ensure it’s optimized for ATS systems. Boost your job search success with tailored career advice today!
-            </p>
-          </motion.div>
-        </div>
-
-        <footer className="bg-white shadow-inner p-4 text-center text-gray-600 text-sm">
-          © 2025 ATS Checker. All rights reserved.
-        </footer>
+      <div className="flex-grow p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h1 className="text-3xl font-bold mb-4 text-blue-600">Why ATS-Friendly Resumes Matter</h1>
+          <p className="text-gray-700 mb-4">
+            An ATS (Applicant Tracking System) friendly resume is essential in today’s job market because most companies use ATS software to filter resumes before they reach human recruiters. Crafting your resume with ATS optimization in mind increases your chances of landing an interview.
+          </p>
+          <h2 className="text-xl font-semibold mb-2 text-green-600">Key Reasons:</h2>
+          <ul className="list-disc pl-5 text-gray-700 mb-4">
+            <li><strong>Keyword Matching:</strong> ATS systems scan for specific resume keywords like "ATS resume" and "job search tips" to match job descriptions.</li>
+            <li><strong>Formatting:</strong> Simple, clean layouts with standard fonts ensure ATS can parse your resume correctly.</li>
+            <li><strong>Relevance:</strong> Including industry-specific terms from Google Trends, such as "career advice," aligns your resume with current hiring trends.</li>
+            <li><strong>Visibility:</strong> An ATS-optimized resume gets past the initial screening, making your application visible to recruiters.</li>
+          </ul>
+          <p className="text-gray-700">
+            Use our ATS Checker to analyze your resume and ensure it’s optimized for ATS systems. Boost your job search success with tailored career advice today!
+          </p>
+        </motion.div>
       </div>
-    </>
+
+      <footer className="bg-white shadow-inner p-4 text-center text-gray-600 text-sm">
+        © 2025 ATS Checker. All rights reserved.
+      </footer>
+    </div>
   );
 }
 
