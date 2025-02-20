@@ -2,10 +2,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     eslint: {
-      ignoreDuringBuilds: true, // Skips ESLint during build (since it’s passing now)
+      ignoreDuringBuilds: true, // Already set, keeps build passing
       dirs: ['pages', 'components'],
     },
-    // Remove or ensure 'output: export' is NOT present
+    // Ensure no 'output: "export"' here
   };
   
   module.exports = nextConfig;

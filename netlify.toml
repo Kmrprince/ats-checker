@@ -2,7 +2,7 @@
 [build]
   command = "npm install && npm run build"
   publish = ".next"
-  functions = "netlify/functions"  # Already set, but confirm this directory exists
+  functions = "netlify/functions"  # Already set, keep this
 
 [functions]
   node_bundler = "esbuild"  # Optimize function bundling
