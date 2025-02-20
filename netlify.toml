@@ -1,3 +1,10 @@
 [build]
+<<<<<<< HEAD
   command = "npm install && npm run export"
   publish = "out"
+=======
+  command = "npm install && npm run export"  # This runs your build and export script
+  publish = "out"                             # This is the correct directory for exported static files
+
+# Remove redirects section if you want to keep routable HTML files
+>>>>>>> 550d4ca91b22d3d5591824794dd5a4f92d82b662
