@@ -1,10 +1,5 @@
 [build]
-  command = "npm install && next build"
-  publish = ".next"
-  base = "/"
-  functions = "netlify/functions"
+  command = "npm install && npm run export"  # This runs your build and export script
+  publish = "out"                             # This is the correct directory for exported static files
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Remove redirects section if you want to keep routable HTML files
