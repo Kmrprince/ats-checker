@@ -5,7 +5,7 @@ const nextConfig = {
       ignoreDuringBuilds: true, // Already set, keeps build passing
       dirs: ['pages', 'components'],
     },
-    'output: "export"' 
+    'output: "export"
   };
   
   module.exports = nextConfig;
